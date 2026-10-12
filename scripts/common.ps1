@@ -1,6 +1,8 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
+$localGh = Get-ChildItem "$ProjectRoot/.local/tools" -Recurse -Filter gh.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($localGh) { $env:PATH = "$($localGh.DirectoryName);$env:PATH" }
 
 function Invoke-Checked {
     param([string]$Command, [string[]]$Arguments)

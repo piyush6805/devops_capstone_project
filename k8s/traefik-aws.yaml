@@ -2,4 +2,9 @@ providers:
   kubernetesIngress:
     enabled: true
 service:
-  type: LoadBalancer
+  spec:
+    type: LoadBalancer
+    loadBalancerClass: service.k8s.aws/nlb
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip

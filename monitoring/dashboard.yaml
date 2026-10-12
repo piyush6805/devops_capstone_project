@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockpilot-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  stockpilot.json: |
+    {
+      "uid": "stockpilot",
+      "title": "StockPilot · application and autoscaling",
+      "schemaVersion": 39,
+      "version": 1,
+      "tags": ["stockpilot", "capstone"],
+      "refresh": "10s",
+      "time": {"from": "now-15m", "to": "now"},
+      "panels": [
+        {"id":1,"type":"timeseries","title":"HTTP requests / second","gridPos":{"h":8,"w":12,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"refId":"A","expr":"sum(rate(http_requests_total{namespace=\"stockpilot\"}[2m])) by (handler)","legendFormat":"{{handler}}"}]},
+        {"id":2,"type":"timeseries","title":"95th percentile latency","gridPos":{"h":8,"w":12,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"fieldConfig":{"defaults":{"unit":"s"}},"targets":[{"refId":"A","expr":"histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"stockpilot\"}[2m])) by (le,handler))","legendFormat":"{{handler}}"}]},
+        {"id":3,"type":"timeseries","title":"HTTP 5xx errors / second","gridPos":{"h":8,"w":12,"x":0,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"refId":"A","expr":"sum(rate(http_requests_total{namespace=\"stockpilot\",status=\"5xx\"}[2m])) or vector(0)"}]},
+        {"id":4,"type":"timeseries","title":"Backend CPU cores","gridPos":{"h":8,"w":12,"x":12,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"refId":"A","expr":"sum(rate(container_cpu_usage_seconds_total{namespace=\"stockpilot\",container=\"backend\"}[2m])) by (pod)","legendFormat":"{{pod}}"}]},
+        {"id":5,"type":"timeseries","title":"Desired backend replicas","gridPos":{"h":8,"w":12,"x":0,"y":16},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"refId":"A","expr":"kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"stockpilot\",horizontalpodautoscaler=\"stockpilot-backend\"}"}]},
+        {"id":6,"type":"timeseries","title":"Available application replicas","gridPos":{"h":8,"w":12,"x":12,"y":16},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"refId":"A","expr":"kube_deployment_status_replicas_available{namespace=\"stockpilot\"}","legendFormat":"{{deployment}}"}]}
+      ]
+    }
