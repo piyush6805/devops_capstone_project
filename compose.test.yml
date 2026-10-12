@@ -1,0 +1,22 @@
+name: stockpilot-tests
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: stockpilot_test
+      POSTGRES_USER: stockpilot_test
+      POSTGRES_PASSWORD: test-only-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpilot_test -d stockpilot_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  tests:
+    build:
+      context: ./backend
+      target: test
+    environment:
+      TEST_DATABASE_URL: postgresql+psycopg://stockpilot_test:test-only-password@postgres-test:5432/stockpilot_test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
