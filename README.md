@@ -132,7 +132,7 @@ Install GitHub CLI (`winget install --id GitHub.cli --exact`) if it is not avail
 
 ```powershell
 .\scripts\github-login.ps1
-.\scripts\publish-github.ps1 -RepositoryName stockpilot-devops-capstone
+.\scripts\publish-github.ps1 -RepositoryName devops_capstone_project
 ```
 
 The workflow tests PostgreSQL APIs, checks Python code, tests/builds the frontend, validates Helm and Terraform, builds both runtime images, and scans **both** with Trivy. Both scan outcomes must succeed before either image is published. Pull requests run validation without publishing images or accessing your cluster.
@@ -140,7 +140,7 @@ The workflow tests PostgreSQL APIs, checks Python code, tests/builds the fronten
 After the first successful main run, open both GHCR packages and change their visibility to **Public**. Names are `ghcr.io/OWNER/REPOSITORY-backend` and `ghcr.io/OWNER/REPOSITORY-frontend`. Each image uses the full commit SHA, never `latest`.
 
 ```powershell
-.\scripts\watch-deploy.ps1 -Repository YOUR_OWNER/stockpilot-devops-capstone
+.\scripts\watch-deploy.ps1 -Repository YOUR_OWNER/devops_capstone_project
 ```
 
 Keep that terminal running during the demo. It checks successful main runs every 60 seconds, requires their SHA to match current main HEAD, downloads the exact chart artifact, verifies repository/image metadata, deploys with bounded Helm waits, and checks `/api/version`. It saves state only after successful deployment. Failed or older runs cannot replace the deployed release. The watcher requires GitHub authentication and runs locally; no kubeconfig is uploaded to GitHub.

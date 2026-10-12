@@ -1,4 +1,4 @@
-param([string]$RepositoryName = 'stockpilot-devops-capstone')
+param([string]$RepositoryName = 'devops_capstone_project')
 . "$PSScriptRoot/common.ps1"
 Require-Command gh
 Invoke-Checked gh @('auth','status')
