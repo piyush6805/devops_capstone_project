@@ -21,6 +21,18 @@ function New-HexPassword {
     return ([BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
 }
 
+function Wait-AppVersion([string]$Commit) {
+    $deadline = (Get-Date).AddSeconds(60)
+    do {
+        try {
+            $version = Invoke-RestMethod 'http://127.0.0.1:8080/api/version' -Headers @{Host='stockpilot.localhost'} -TimeoutSec 5
+            if ($version.commit -eq $Commit) { return $version }
+        } catch { Write-Verbose 'Waiting for ingress endpoints to converge after rollout.' }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+    throw "Ingress did not serve expected commit $Commit within 60 seconds."
+}
+
 function Ensure-DatabaseSecret([string]$Context) {
     & kubectl --context $Context -n stockpilot get secret stockpilot-db -o name 2>$null | Out-Null
     if ($LASTEXITCODE -eq 0) { return }

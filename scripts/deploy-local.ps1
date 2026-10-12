@@ -22,6 +22,5 @@ $arguments = @('upgrade','--install','stockpilot',$ChartPath,'--kube-context',$c
     '--set-string',"backend.tag=$Commit",'--set-string',"frontend.tag=$Commit",'--atomic','--wait','--wait-for-jobs','--timeout','10m')
 if ($SkipMonitoring) { $arguments += @('--set','monitoring.enabled=false') }
 Invoke-Checked helm $arguments
-$response = Invoke-RestMethod 'http://127.0.0.1:8080/api/version' -Headers @{Host='stockpilot.localhost'} -TimeoutSec 15
-if ($response.commit -ne $Commit) { throw "Version mismatch: expected $Commit, received $($response.commit)" }
+$response = Wait-AppVersion $Commit
 Write-Host "Deployed $Commit at http://stockpilot.localhost:8080"
