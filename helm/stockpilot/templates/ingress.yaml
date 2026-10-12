@@ -1,0 +1,18 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "stockpilot.name" . }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - {{ if .Values.ingress.host }}host: {{ .Values.ingress.host | quote }}{{ end }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: {service: {name: {{ include "stockpilot.name" . }}-backend, port: {number: 8000}}}
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: {{ include "stockpilot.name" . }}-frontend, port: {number: 80}}}
+{{- end }}

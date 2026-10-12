@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broken-image
+  namespace: stockpilot-troubleshooting
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: broken-image}}
+  template:
+    metadata: {labels: {app: broken-image}}
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/stockpilot-example/not-an-image:missing

@@ -1,0 +1,6 @@
+database:
+  storageClass: gp3
+ingress:
+  host: ""
+monitoring:
+  enabled: true

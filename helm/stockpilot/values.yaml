@@ -1,0 +1,36 @@
+backend:
+  image: stockpilot-backend
+  tag: local
+  replicas: 2
+  pullPolicy: IfNotPresent
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+frontend:
+  image: stockpilot-frontend
+  tag: local
+  replicas: 2
+  pullPolicy: IfNotPresent
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+imagePullSecrets: []
+database:
+  existingSecret: stockpilot-db
+  image: postgres:16-alpine
+  storageSize: 5Gi
+  storageClass: ""
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: "1", memory: 512Mi}
+ingress:
+  enabled: true
+  className: traefik
+  host: stockpilot.localhost
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+monitoring:
+  enabled: false

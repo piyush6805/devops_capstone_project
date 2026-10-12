@@ -1,0 +1,8 @@
+providers:
+  kubernetesIngress:
+    enabled: true
+ports:
+  web:
+    nodePort: 30080
+service:
+  type: NodePort
