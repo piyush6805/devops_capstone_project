@@ -14,6 +14,9 @@ mock_provider "aws" {
   mock_resource "aws_iam_openid_connect_provider" {
     defaults = { arn = "arn:aws:iam::123456789012:oidc-provider/mock" }
   }
+  mock_resource "aws_iam_policy" {
+    defaults = { arn = "arn:aws:iam::123456789012:policy/mock" }
+  }
 }
 
 run "network_and_cluster" {
@@ -37,7 +40,7 @@ run "network_and_cluster" {
 }
 
 run "github_main_branch_only" {
-  command = plan
+  command = apply
   variables {
     github_repository = "example/stockpilot"
   }
