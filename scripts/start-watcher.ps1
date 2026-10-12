@@ -16,8 +16,9 @@ if (Test-Path -LiteralPath $recordPath) {
         return
     }
 }
-$shell = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
-if (-not $shell) { $shell = (Get-Command powershell).Source }
+$shellCommand = Get-Command pwsh -ErrorAction SilentlyContinue
+if (-not $shellCommand) { $shellCommand = Get-Command powershell }
+$shell = $shellCommand.Source
 $script = "$ProjectRoot/scripts/watch-deploy.ps1"
 $process = Start-Process -FilePath $shell -ArgumentList @('-NoProfile','-NonInteractive','-File',('"'+$script+'"'),'-Repository',$Repository) `
     -WorkingDirectory $ProjectRoot -WindowStyle Hidden -RedirectStandardOutput "$directory/watcher-output.log" -RedirectStandardError "$directory/watcher-errors.log" -PassThru
