@@ -16,12 +16,14 @@ def main():
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
-            command.upgrade(Config("alembic.ini"), "head")
-            print("Release migration completed.", flush=True)
-            return
         except SQLAlchemyError:
             time.sleep(2)
-    raise SystemExit("Timed out waiting for PostgreSQL; migration failed")
+            continue
+        break
+    else:
+        raise SystemExit("Timed out waiting for PostgreSQL; migration failed")
+    command.upgrade(Config("alembic.ini"), "head")
+    print("Release migration completed.", flush=True)
 
 
 if __name__ == "__main__":
