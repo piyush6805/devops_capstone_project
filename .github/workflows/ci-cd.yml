@@ -1,0 +1,143 @@
+name: StockPilot CI/CD
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: stockpilot-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: stockpilot_test
+          POSTGRES_USER: stockpilot_test
+          POSTGRES_PASSWORD: test-only-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U stockpilot_test -d stockpilot_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r backend/requirements-dev.txt
+      - run: ruff check backend --select E9,F63,F7,F82
+      - name: PostgreSQL API and concurrency tests
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://stockpilot_test:test-only-password@localhost:5432/stockpilot_test
+        run: pytest -v --junitxml=../artifacts/pytest.xml
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - working-directory: frontend
+        run: npm ci && npm test && npm run build
+      - uses: azure/setup-helm@v4
+      - name: Validate Helm environments
+        run: |
+          helm lint helm/stockpilot
+          helm template stockpilot helm/stockpilot -f helm/stockpilot/values-local.yaml > /dev/null
+          helm template stockpilot helm/stockpilot -f helm/stockpilot/values-aws.yaml > /dev/null
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: '1.16.2'}
+      - working-directory: terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+          terraform test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: test-results, path: artifacts/pytest.xml}
+  build-scan-publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions: {contents: read, packages: write}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image names
+        id: images
+        shell: bash
+        run: |
+          echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: Build both runtime images
+        id: build
+        run: |
+          docker build --pull -t ${{ steps.images.outputs.prefix }}-backend:${{ github.sha }} backend
+          docker build --pull -t ${{ steps.images.outputs.prefix }}-frontend:${{ github.sha }} frontend
+      - name: Scan backend
+        id: backend_scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ steps.images.outputs.prefix }}-backend:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: table
+          output: trivy-backend.txt
+      - name: Scan frontend
+        id: frontend_scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ steps.images.outputs.prefix }}-frontend:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: table
+          output: trivy-frontend.txt
+      - name: Preserve both scan reports
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with: {name: security-reports, path: 'trivy-*.txt'}
+      - name: Enforce security gate before either image is published
+        if: steps.backend_scan.outcome != 'success' || steps.frontend_scan.outcome != 'success'
+        run: echo 'HIGH/CRITICAL findings or scanner failure; image promotion stopped.' && exit 1
+      - uses: docker/login-action@v3
+        with: {registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}'}
+      - name: Publish SHA-tagged images
+        run: |
+          docker push ${{ steps.images.outputs.prefix }}-backend:${{ github.sha }}
+          docker push ${{ steps.images.outputs.prefix }}-frontend:${{ github.sha }}
+      - name: Package matching deployment artifact
+        run: |
+          mkdir -p deployment
+          cp -r helm/stockpilot deployment/chart
+          printf '{"commit":"%s","backendImage":"%s-backend","frontendImage":"%s-frontend","repository":"%s"}\n' \
+            "$GITHUB_SHA" '${{ steps.images.outputs.prefix }}' '${{ steps.images.outputs.prefix }}' "$GITHUB_REPOSITORY" > deployment/release.json
+      - uses: actions/upload-artifact@v4
+        with: {name: stockpilot-deployment, path: deployment/, retention-days: 30}
+  deploy-aws:
+    if: vars.DEPLOY_AWS == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-scan-publish
+    runs-on: ubuntu-latest
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: {role-to-assume: '${{ vars.AWS_DEPLOY_ROLE_ARN }}', aws-region: ap-south-1}
+      - uses: azure/setup-helm@v4
+      - name: Configure EKS access
+        run: aws eks update-kubeconfig --region ap-south-1 --name "${{ vars.EKS_CLUSTER_NAME }}"
+      - name: Deploy and verify version
+        shell: bash
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY,,}"
+          helm upgrade --install stockpilot helm/stockpilot -n stockpilot -f helm/stockpilot/values-aws.yaml \
+            --set-string backend.image="$prefix-backend" --set-string frontend.image="$prefix-frontend" \
+            --set-string backend.tag="$GITHUB_SHA" --set-string frontend.tag="$GITHUB_SHA" \
+            --atomic --wait --wait-for-jobs --timeout 10m
+          kubectl -n stockpilot port-forward svc/stockpilot-backend 18000:8000 >/tmp/stockpilot-forward.log 2>&1 &
+          forward_pid=$!
+          trap 'kill "$forward_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18000/api/version > /tmp/version.json; then break; fi
+            sleep 2
+          done
+          python -c 'import json,os; assert json.load(open("/tmp/version.json"))["commit"] == os.environ["GITHUB_SHA"]'
