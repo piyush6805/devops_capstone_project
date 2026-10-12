@@ -1,8 +1,8 @@
-FROM python:3.12-slim AS base
+FROM python:3.12-alpine AS base
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home --uid 10001 appuser
+RUN apk upgrade --no-cache && pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt && addgroup -g 10001 appuser && adduser -D -u 10001 -G appuser appuser
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
@@ -20,3 +20,7 @@ USER 10001:10001
 CMD ["pytest", "-v", "-p", "no:cacheprovider"]
 
 FROM base AS runtime
+USER root
+# Build tooling is unnecessary in the deployed image; remove its vendored libraries too.
+RUN python -m pip uninstall -y pip setuptools wheel && rm -rf /usr/local/lib/python3.12/ensurepip
+USER 10001:10001

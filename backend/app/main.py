@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
-from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -9,10 +8,12 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .db import get_db
 from .models import Movement, Product
+from .metrics import MetricsMiddleware, metrics_response
 from .schemas import DashboardOut, MovementInput, MovementOut, ProductInput, ProductOut
 
 app = FastAPI(title="StockPilot API", version="1.0.0")
-Instrumentator(excluded_handlers=["/health", "/ready", "/metrics"]).instrument(app).expose(app)
+app.add_middleware(MetricsMiddleware)
+app.get("/metrics", include_in_schema=False)(metrics_response)
 
 
 @app.get("/health")
