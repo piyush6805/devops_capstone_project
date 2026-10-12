@@ -12,7 +12,8 @@ def main():
     for _ in range(120):
         try:
             with engine.connect() as connection:
-                if connection.scalar(text("SELECT version_num FROM alembic_version")) == expected:
+                exists = connection.scalar(text("SELECT to_regclass('public.alembic_version')"))
+                if exists and connection.scalar(text("SELECT version_num FROM alembic_version")) == expected:
                     return
         except SQLAlchemyError:
             pass

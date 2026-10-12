@@ -20,8 +20,6 @@ metadata:
 spec:
   {{- if or (ne $component "backend") (not $root.Values.hpa.enabled) }}
   replicas: {{ $config.replicas }}
-  {{- else }}
-  replicas: {{ $root.Values.hpa.minReplicas }}
   {{- end }}
   selector:
     matchLabels: {app.kubernetes.io/name: stockpilot-{{ $component }}, app.kubernetes.io/instance: {{ $root.Release.Name }}}
