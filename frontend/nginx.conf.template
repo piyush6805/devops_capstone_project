@@ -1,0 +1,15 @@
+server {
+  listen 8080;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+  location / { try_files $uri $uri/ /index.html; }
+  location /api/ {
+    proxy_pass http://${BACKEND_UPSTREAM};
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 30s;
+  }
+  location = /nginx-health { access_log off; return 200 "ok\n"; }
+}
