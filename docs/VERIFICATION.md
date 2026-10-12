@@ -1,6 +1,6 @@
 # Verification record
 
-Verified on 12 October 2026 on the prepared Windows workstation. Outputs and PNGs are stored locally under the ignored `artifacts/` folder. Results describe actual checks, not predicted rubric marks.
+Local checks were verified on 12 October 2026; GitHub publication and registry-to-cluster delivery were verified on 13 October 2026. Outputs and PNGs are stored locally under the ignored `artifacts/` folder. Results describe actual checks, not predicted rubric marks.
 
 | Check | Result |
 |---|---|
@@ -18,7 +18,7 @@ Verified on 12 October 2026 on the prepared Windows workstation. Outputs and PNG
 | Grafana | Six populated request/latency/error/CPU/replica panels; screenshot captured |
 | Troubleshooting | Bad image pull and empty Service endpoints captured; image/selector repaired and isolated resources removed |
 | Rollback | Rolled back to the prior application commit, restored the current commit, and confirmed schema revision 0001_inventory remained unchanged |
-| GitHub / GHCR / watcher | Implemented; live publication and end-to-end watcher verification require GitHub browser authentication |
+| GitHub / GHCR / watcher | Public repository published; hosted CI passed all tests, browser checks, Helm/Terraform validation, both image builds and Trivy scans; anonymous GHCR manifests verified; watcher downloaded the matching artifact and deployed its images to Kind |
 | Real AWS | Prepared only; provisioning/evaluation/destroy require the optional AWS execution path |
 
 A 120-second load run overlapped the intentional PostgreSQL pod replacement and recorded 18,962 successes and 281 failures. That run demonstrates fault injection/recovery; it is not the zero-error acceptance run. The subsequent stable run above passed.
@@ -27,4 +27,10 @@ Testing uncovered and corrected a Helm 4 ownership conflict between Helm's backe
 
 Version verification polls for up to 60 seconds after Helm completes, allowing Ingress endpoints to converge before advancing watcher state. This handles the brief gateway error observed during the rollback rehearsal.
 
-GitHub login is a user interaction; no green Actions URL or GHCR publication is claimed before it completes. Mock Terraform tests do not substitute for the instructor's real AWS evidence unless explicitly accepted.
+Public repository: https://github.com/piyush6805/devops_capstone_project
+
+Successful pipeline: https://github.com/piyush6805/devops_capstone_project/actions/runs/38291481396
+
+The first published and watcher-deployed commit is `a0ce0e691b5e78f93cf5c5f7ae73f5af9a9e133d`. Both frontend/backend images use this SHA tag. The live `/api/version` response matches it. GitHub run metadata, full logs, security reports and hosted browser screenshots are preserved under `artifacts/github/`.
+
+Mock Terraform tests do not substitute for the instructor's real AWS evidence unless explicitly accepted. Real AWS provisioning remains disabled.

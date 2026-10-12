@@ -13,6 +13,6 @@ try {
         Invoke-Checked git @('push','-u','origin','main')
     }
     Write-Host "GitHub: https://github.com/$owner/$RepositoryName"
-    Write-Host 'After the first successful build, make BOTH GHCR packages public in their Package settings.'
+    Write-Host 'Verify both GHCR packages allow anonymous pulls; change Package visibility to Public if needed.'
     Write-Host "Watcher: ./scripts/watch-deploy.ps1 -Repository $owner/$RepositoryName"
 } finally { Pop-Location }

@@ -1,5 +1,9 @@
 # StockPilot
 
+[![StockPilot CI/CD](https://github.com/piyush6805/devops_capstone_project/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/piyush6805/devops_capstone_project/actions/workflows/ci-cd.yml)
+
+[Public source](https://github.com/piyush6805/devops_capstone_project) · [Verified pipeline run](https://github.com/piyush6805/devops_capstone_project/actions/runs/38291481396) · [Backend image](https://github.com/users/piyush6805/packages/container/package/devops_capstone_project-backend) · [Frontend image](https://github.com/users/piyush6805/packages/container/package/devops_capstone_project-frontend)
+
 An inventory dashboard with an auditable stock ledger, built for the DevOps capstone. Manage products, receive or issue stock, track adjustments, and spot low-stock items. Prices use INR. The demonstration uses fictional data and has no authentication.
 
 The original instructor material remains under `docs/reference/`. StockPilot has its own application domain, data model, UI, test suite, and delivery configuration.
@@ -137,13 +141,16 @@ Install GitHub CLI (`winget install --id GitHub.cli --exact`) if it is not avail
 
 The workflow tests PostgreSQL APIs, checks Python code, tests/builds the frontend, validates Helm and Terraform, builds both runtime images, and scans **both** with Trivy. Both scan outcomes must succeed before either image is published. Pull requests run validation without publishing images or accessing your cluster.
 
-After the first successful main run, open both GHCR packages and change their visibility to **Public**. Names are `ghcr.io/OWNER/REPOSITORY-backend` and `ghcr.io/OWNER/REPOSITORY-frontend`. Each image uses the full commit SHA, never `latest`.
+Both published GHCR packages were verified to allow anonymous pulls. When reproducing this setup in another repository, verify package visibility and change it to **Public** if necessary. Names are `ghcr.io/OWNER/REPOSITORY-backend` and `ghcr.io/OWNER/REPOSITORY-frontend`. Each image uses the full commit SHA, never `latest`.
 
 ```powershell
-.\scripts\watch-deploy.ps1 -Repository YOUR_OWNER/devops_capstone_project
+.\scripts\start-watcher.ps1
+# .\scripts\stop-watcher.ps1
+# Foreground mode for watching the demo output:
+# .\scripts\watch-deploy.ps1 -Repository piyush6805/devops_capstone_project
 ```
 
-Keep that terminal running during the demo. It checks successful main runs every 60 seconds, requires their SHA to match current main HEAD, downloads the exact chart artifact, verifies repository/image metadata, deploys with bounded Helm waits, and checks `/api/version`. It saves state only after successful deployment. Failed or older runs cannot replace the deployed release. The watcher requires GitHub authentication and runs locally; no kubeconfig is uploaded to GitHub.
+The start script runs the watcher in the background while your computer and Docker are running; its logs and PID are saved under `.local/`. Foreground mode requires keeping its terminal open. It checks successful main runs every 60 seconds, requires their SHA to match current main HEAD, downloads the exact chart artifact, verifies repository/image metadata, deploys with bounded Helm waits, and checks `/api/version`. It saves state only after successful deployment. Failed or older runs cannot replace the deployed release. The watcher requires GitHub authentication and runs locally; no kubeconfig is uploaded to GitHub. It does not install a Windows startup task; run the start script again after reboot.
 
 ## AWS path and grading
 
