@@ -38,6 +38,26 @@ jobs:
         with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
       - working-directory: frontend
         run: npm ci && npm test && npm run build
+      - name: Install Chromium for browser acceptance checks
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Real browser CRUD and responsive-layout checks
+        env:
+          DATABASE_URL: postgresql+psycopg://stockpilot_test:test-only-password@localhost:5432/stockpilot_test
+          APP_VERSION: ${{ github.sha }}
+          APP_URL: http://127.0.0.1:5173
+        shell: bash
+        run: |
+          (cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000) >/tmp/stockpilot-api.log 2>&1 &
+          api_pid=$!
+          (cd frontend && npm run dev -- --host 127.0.0.1) >/tmp/stockpilot-ui.log 2>&1 &
+          ui_pid=$!
+          trap 'kill "$api_pid" "$ui_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/ready && curl -fsS http://127.0.0.1:5173/; then break; fi
+            sleep 2
+          done
+          (cd frontend && npm run test:e2e)
       - uses: azure/setup-helm@v4
       - name: Validate Helm environments
         run: |
@@ -54,7 +74,11 @@ jobs:
           terraform test
       - uses: actions/upload-artifact@v4
         if: always()
-        with: {name: test-results, path: artifacts/pytest.xml}
+        with:
+          name: test-results
+          path: |
+            artifacts/pytest.xml
+            artifacts/dashboard-*.png
   build-scan-publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test

@@ -5,7 +5,8 @@ import time
 import urllib.request
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--url", default="http://stockpilot.localhost:8080/api/products")
+parser.add_argument("--url", default="http://127.0.0.1:8080/api/products")
+parser.add_argument("--host", default="stockpilot.localhost", help="Ingress Host header; avoids relying on OS resolution of .localhost")
 parser.add_argument("--seconds", type=int, default=120)
 parser.add_argument("--workers", type=int, default=20)
 args = parser.parse_args()
@@ -18,11 +19,13 @@ def worker(_):
     successes = failures = 0
     while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(args.url, timeout=5) as response:
+            request = urllib.request.Request(args.url, headers={"Host": args.host} if args.host else {})
+            with urllib.request.urlopen(request, timeout=5) as response:
                 response.read()
                 successes += 1
         except Exception:
             failures += 1
+            time.sleep(0.01)
     return successes, failures
 
 

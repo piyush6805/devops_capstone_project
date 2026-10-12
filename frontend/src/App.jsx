@@ -60,7 +60,7 @@ export default function App() {
       <a href="#" className="brand" onClick={e => { e.preventDefault(); setPage('Overview'); }}><span className="brand-symbol">▦</span><span>stock<span className="brand-light">pilot</span><small>INVENTORY, IN VIEW.</small></span></a>
       <div className="workspace"><span className="workspace-icon">S</span><div><strong>Demo warehouse</strong><small>Capstone workspace</small></div></div>
       <div className="nav-label">WORKSPACE</div>
-      <nav>{[['Overview', '◫'], ['Products', '▦'], ['Stock history', '⇄']].map(([name, icon]) => <button key={name} className={page === name ? 'active' : ''} onClick={() => { setPage(name); setSearch(''); setLowOnly(false); }}><span>{icon}</span>{name}{name === 'Products' && <small>{products.length}</small>}</button>)}</nav>
+      <nav>{[['Overview', '◫'], ['Products', '▦'], ['Stock history', '⇄']].map(([name, icon]) => <button key={name} aria-label={name} className={page === name ? 'active' : ''} onClick={() => { setPage(name); setSearch(''); setLowOnly(false); }}><span>{icon}</span>{name}{name === 'Products' && <small>{products.length}</small>}</button>)}</nav>
       <div className="sidebar-note"><span className="live-dot"/> A clear view of every unit.<p>Record stock changes.<br/>Keep the full story.</p></div>
       <footer><div className="avatar">SP</div><div><strong>StockPilot</strong><small>DevOps capstone · v1.0</small></div></footer>
     </aside>
