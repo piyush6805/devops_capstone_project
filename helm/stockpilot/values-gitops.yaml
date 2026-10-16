@@ -1,0 +1,9 @@
+# Updated only to a full image SHA published by a successful CI run.
+backend:
+  image: ghcr.io/piyush6805/devops_capstone_project-backend
+  tag: 9e5b89aefb8f79cccce90c6e12f3ae93c31d5adb
+  pullPolicy: IfNotPresent
+frontend:
+  image: ghcr.io/piyush6805/devops_capstone_project-frontend
+  tag: 9e5b89aefb8f79cccce90c6e12f3ae93c31d5adb
+  pullPolicy: IfNotPresent

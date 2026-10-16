@@ -17,6 +17,7 @@ flowchart LR
   Build --> Scan[Trivy HIGH / CRITICAL gate]
   Scan --> Registry[GHCR: commit SHA tags]
   Registry --> Watch[Local PowerShell watcher]
+  Registry --> Argo[Argo CD: optional AWS GitOps]
   Watch --> Helm[Helm deployment]
   Browser --> Ingress[Traefik Ingress]
   Ingress --> UI[React / non-root Nginx]
@@ -26,9 +27,18 @@ flowchart LR
   Prom --> Grafana[Grafana dashboards]
   Helm --> UI
   Helm --> API
+  Argo --> Helm
 ```
 
 Docker Compose is the quickest way to run the app. A separate Kind cluster demonstrates Kubernetes. Terraform prepares real AWS VPC/EKS infrastructure as an optional second deployment path.
+
+## Screenshot evidence
+
+These initial screenshots are real local verification captures. The dashboard contains browser-test data, and the Grafana image is a local load/scaling check. They are previews, not AWS or ArgoCD evidence. The operator guide and presentation notes live in the parent `Devops_capstone` folder, outside this submission repository. The submittable screenshot page is [Screenshot.md](Screenshot.md), with captured PNGs in `docs/screenshots/`. The submission deadline is 16 October 2026, per the latest instruction; the older date in the attached submission note is superseded. Add final evidence images here only after each corresponding step has actually succeeded.
+
+![StockPilot dashboard from a local browser verification run](docs/screenshots/local-dashboard-smoke.png)
+
+![Grafana application and autoscaling panels from a local verification run](docs/screenshots/local-grafana-smoke.png)
 
 ## Start on Windows
 
@@ -156,12 +166,15 @@ The start script runs the watcher in the background while your computer and Dock
 
 See [AWS runbook](docs/AWS.md). Terraform creates a VPC, two public/private subnet pairs, one NAT gateway, an EKS cluster, two managed worker nodes, EBS CSI permissions, and AWS Load Balancer Controller permissions. Optional GitHub OIDC is restricted to main and Kubernetes administration in the application namespace.
 
-**No AWS resources are provisioned by local setup or mocked tests.** The written rubric asks for actual AWS plan, VPC/EKS, and destroy evidence. Obtain the instructor's acceptance of mocking if using only the local path; do not present mock output as AWS provisioning.
+**No AWS resources are provisioned by local setup or mocked tests.** The written rubric asks for actual AWS plan, VPC/EKS, Argo CD sync, and destroy evidence. Obtain the instructor's acceptance of mocking if using only the local path; do not present mock output as AWS provisioning. See [AWS and Argo CD deployment](docs/AWS.md).
 
 ## Submission and presentation
 
+The attached submission note asks for a `demo/` folder containing the presentation video (MP4) and slide deck (PPT or PDF). Per the requested working layout, keep the master PPT/MP4 in this project root and copy them into `demo/` for upload so both locations are covered. The required video walkthrough lists the architecture, codebase, CI/CD, Terraform plan and AWS VPC/EKS, Argo CD sync, healthy Kubernetes resources, Prometheus target, and Grafana dashboard. Argo CD configuration is in `argocd/` and `scripts/bootstrap-argocd.ps1`; AWS resources are not created by tests or Terraform validation, so capture real cloud evidence only after deployment. Screenshot evidence belongs in [Screenshot.md](Screenshot.md) and `docs/screenshots/`. The operator guide and `DEMO.md` are kept in the parent `Devops_capstone` folder, outside this repository. PPT and MP4 belong in this project root after they are created. Deadline: **16 October 2026**, per the latest instruction.
+
 - [Rubric checklist and evidence map](docs/SUBMISSION.md)
-- [Presentation walkthrough](docs/DEMO.md)
+- [Screenshot evidence](Screenshot.md)
+- Operator guide and video notes: kept locally in the parent `Devops_capstone` folder and intentionally excluded from this submission repo.
 - [API contract](docs/API.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Verification record](docs/VERIFICATION.md)

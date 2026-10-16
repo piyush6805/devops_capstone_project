@@ -48,6 +48,10 @@ run "github_main_branch_only" {
     condition     = jsondecode(aws_iam_role.github[0].assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:example/stockpilot:ref:refs/heads/main"
     error_message = "OIDC trust must be restricted to this repository's main branch."
   }
+  assert {
+    condition     = length(aws_eks_access_policy_association.github_argocd[0].access_scope[0].namespaces) == 1 && contains(aws_eks_access_policy_association.github_argocd[0].access_scope[0].namespaces, "argocd")
+    error_message = "The GitHub deploy role must be scoped to the Argo CD namespace to update and observe the GitOps application."
+  }
 }
 
 run "reject_single_worker" {

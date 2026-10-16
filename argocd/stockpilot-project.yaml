@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: stockpilot
+  namespace: argocd
+spec:
+  description: StockPilot application resources in the stockpilot namespace.
+  sourceRepos:
+    - https://github.com/piyush6805/devops_capstone_project.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: stockpilot
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

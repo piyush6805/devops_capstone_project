@@ -40,3 +40,15 @@ resource "aws_eks_access_policy_association" "github" {
   }
   depends_on = [aws_eks_access_entry.github]
 }
+
+resource "aws_eks_access_policy_association" "github_argocd" {
+  count         = var.github_repository == "" ? 0 : 1
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = aws_iam_role.github[0].arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
+  access_scope {
+    type       = "namespace"
+    namespaces = ["argocd"]
+  }
+  depends_on = [aws_eks_access_entry.github]
+}

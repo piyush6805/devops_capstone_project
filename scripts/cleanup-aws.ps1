@@ -10,13 +10,15 @@ foreach ($claim in $claims.items) {
         if ($pv.spec.csi.driver -eq 'ebs.csi.aws.com') { $volumeIds += $pv.spec.csi.volumeHandle }
     }
 }
-Invoke-Checked helm @('--kube-context',$context,'uninstall','stockpilot','-n','stockpilot','--wait','--timeout','10m')
+Invoke-Checked kubectl @('--context',$context,'delete','-f',"$ProjectRoot/argocd/stockpilot-application.yaml",'--wait=true','--timeout=10m')
+Invoke-Checked kubectl @('--context',$context,'delete','-f',"$ProjectRoot/argocd/stockpilot-project.yaml",'--wait=true','--timeout=2m')
 Invoke-Checked kubectl @('--context',$context,'delete','pvc','--all','-n','stockpilot','--wait=true','--timeout=300s')
 foreach ($volume in $volumeIds) { Invoke-Checked aws @('ec2','wait','volume-deleted','--region','ap-south-1','--volume-ids',$volume) }
 # Keep the AWS Load Balancer Controller alive until the Service finalizer deletes its NLB.
 Invoke-Checked helm @('--kube-context',$context,'uninstall','traefik','-n','ingress','--wait','--timeout','10m')
 Invoke-Checked helm @('--kube-context',$context,'uninstall','monitoring','-n','monitoring','--wait','--timeout','10m')
 Invoke-Checked helm @('--kube-context',$context,'uninstall','aws-load-balancer-controller','-n','kube-system','--wait','--timeout','5m')
+Invoke-Checked helm @('--kube-context',$context,'uninstall','argocd','-n','argocd','--wait','--timeout','5m')
 if ($DestroyInfrastructure) {
     Push-Location "$ProjectRoot/terraform"
     try { Invoke-Checked terraform @('destroy') } finally { Pop-Location }

@@ -31,4 +31,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 Invoke-Checked helm @('upgrade','--install','monitoring','prometheus-community/kube-prometheus-stack','--version','92.3.0','--kube-context',$context,'-n','monitoring','-f',"$ProjectRoot/monitoring/prometheus-values.yaml",'--wait','--timeout','10m')
 Invoke-Checked kubectl @('--context',$context,'apply','-f',"$ProjectRoot/monitoring/dashboard.yaml")
-Write-Host 'AWS prerequisites ready. Enable the optional GitHub deploy job after configuring its repository variables.'
+& "$PSScriptRoot/bootstrap-argocd.ps1" -ClusterContext $context
+if ($LASTEXITCODE -ne 0) { throw 'Argo CD bootstrap failed.' }
+Write-Host 'AWS prerequisites and the Argo CD-managed StockPilot application are ready.'

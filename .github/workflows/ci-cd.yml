@@ -63,7 +63,9 @@ jobs:
         run: |
           helm lint helm/stockpilot
           helm template stockpilot helm/stockpilot -f helm/stockpilot/values-local.yaml > /dev/null
-          helm template stockpilot helm/stockpilot -f helm/stockpilot/values-aws.yaml > /dev/null
+          helm template stockpilot helm/stockpilot -f helm/stockpilot/values-aws.yaml -f helm/stockpilot/values-gitops.yaml > /dev/null
+      - name: Validate Argo CD GitOps configuration
+        run: python scripts/validate-argocd.py
       - uses: hashicorp/setup-terraform@v3
         with: {terraform_version: '1.16.2'}
       - working-directory: terraform
@@ -146,17 +148,24 @@ jobs:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with: {role-to-assume: '${{ vars.AWS_DEPLOY_ROLE_ARN }}', aws-region: ap-south-1}
-      - uses: azure/setup-helm@v4
       - name: Configure EKS access
         run: aws eks update-kubeconfig --region ap-south-1 --name "${{ vars.EKS_CLUSTER_NAME }}"
-      - name: Deploy and verify version
+      - name: Pin the successful image SHA in the Argo CD application
         shell: bash
         run: |
           prefix="ghcr.io/${GITHUB_REPOSITORY,,}"
-          helm upgrade --install stockpilot helm/stockpilot -n stockpilot -f helm/stockpilot/values-aws.yaml \
-            --set-string backend.image="$prefix-backend" --set-string frontend.image="$prefix-frontend" \
-            --set-string backend.tag="$GITHUB_SHA" --set-string frontend.tag="$GITHUB_SHA" \
-            --atomic --wait --wait-for-jobs --timeout 10m
+          patch=$(cat <<EOF
+          {"spec":{"source":{"targetRevision":"main","helm":{"parameters":[
+            {"name":"backend.image","value":"$prefix-backend","forceString":true},
+            {"name":"backend.tag","value":"$GITHUB_SHA","forceString":true},
+            {"name":"frontend.image","value":"$prefix-frontend","forceString":true},
+            {"name":"frontend.tag","value":"$GITHUB_SHA","forceString":true}
+          ]}}}}
+          EOF
+          )
+          kubectl -n argocd patch application stockpilot --type merge --patch "$patch"
+          kubectl -n argocd wait application/stockpilot --for=jsonpath='{.status.sync.status}'=Synced --timeout=15m
+          kubectl -n argocd wait application/stockpilot --for=jsonpath='{.status.health.status}'=Healthy --timeout=15m
           kubectl -n stockpilot port-forward svc/stockpilot-backend 18000:8000 >/tmp/stockpilot-forward.log 2>&1 &
           forward_pid=$!
           trap 'kill "$forward_pid"' EXIT
