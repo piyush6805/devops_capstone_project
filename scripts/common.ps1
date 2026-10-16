@@ -34,8 +34,9 @@ function Wait-AppVersion([string]$Commit) {
 }
 
 function Ensure-DatabaseSecret([string]$Context) {
-    & kubectl --context $Context -n stockpilot get secret stockpilot-db -o name 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) { return }
+    $existingSecret = & kubectl --context $Context -n stockpilot get secret stockpilot-db -o name --ignore-not-found=true
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to check for the StockPilot database Secret.' }
+    if ($existingSecret) { return }
     $password = New-HexPassword
     $secret = @{apiVersion='v1';kind='Secret';metadata=@{name='stockpilot-db';namespace='stockpilot'};type='Opaque';stringData=@{
         POSTGRES_USER='stockpilot';POSTGRES_DB='stockpilot';POSTGRES_PASSWORD=$password

@@ -19,8 +19,9 @@ Invoke-Checked helm @('upgrade','--install','metrics-server','metrics-server/met
 if (-not $SkipMonitoring) {
     Invoke-Checked kubectl @('--context',$context,'create','namespace','monitoring','--dry-run=client','-o','json') | & kubectl --context $context apply -f - | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Monitoring namespace creation failed' }
-    & kubectl --context $context -n monitoring get secret stockpilot-grafana -o name 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $grafanaSecret = & kubectl --context $context -n monitoring get secret stockpilot-grafana -o name --ignore-not-found=true
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to check for the Grafana Secret.' }
+    if (-not $grafanaSecret) {
         $password = New-HexPassword
         @{apiVersion='v1';kind='Secret';metadata=@{name='stockpilot-grafana';namespace='monitoring'};type='Opaque';stringData=@{'admin-user'='admin';'admin-password'=$password}} | ConvertTo-Json -Depth 5 | & kubectl --context $context apply -f - | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Grafana secret creation failed' }

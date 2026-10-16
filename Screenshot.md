@@ -20,11 +20,17 @@ This page contains evidence captured from real StockPilot runs. PNG files are st
 
 ## AWS and ArgoCD
 ![alt text](docs/screenshots/aws.png)
+![alt text](docs/screenshots/github_actions.png)
+![alt text](<docs/screenshots/terraform apply.png>)
+![alt text](docs/screenshots/kubectlgetnodesterraform.png)
+![alt text](docs/screenshots/image(1).png)
+![alt text](docs/screenshots/image(2).png)
+![alt text](<docs/screenshots/kubernetes synced.png>)
 
 ## Kubernetes and monitoring
+![alt text](docs/screenshots/prometheus.png)
+![alt text](docs/screenshots/grafana.png)
 
-_Pending healthy cluster evidence, Prometheus target UP, and populated Grafana dashboard._
 
 ## AWS teardown
-
 _Pending successful teardown; include only if AWS resources were provisioned._
