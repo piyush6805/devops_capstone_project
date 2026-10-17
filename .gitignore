@@ -17,5 +17,6 @@ terraform.tfvars
 !terraform.tfvars.example
 .local/
 artifacts/
+.codex-ppt-build/
 *.log
 .DS_Store

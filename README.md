@@ -17,7 +17,8 @@ flowchart LR
   Build --> Scan[Trivy HIGH / CRITICAL gate]
   Scan --> Registry[GHCR: commit SHA tags]
   Registry --> Watch[Local PowerShell watcher]
-  Registry --> Argo[Argo CD: optional AWS GitOps]
+  Registry --> Deploy[Optional OIDC-gated deploy job]
+  Deploy --> Argo[Argo CD: AWS GitOps]
   Watch --> Helm[Helm deployment]
   Browser --> Ingress[Traefik Ingress]
   Ingress --> UI[React / non-root Nginx]
@@ -30,11 +31,11 @@ flowchart LR
   Argo --> Helm
 ```
 
-Docker Compose is the quickest way to run the app. A separate Kind cluster demonstrates Kubernetes. Terraform prepares real AWS VPC/EKS infrastructure as an optional second deployment path.
+Docker Compose is the quickest way to run the app. A separate Kind cluster demonstrates Kubernetes locally. Terraform provisions the AWS VPC/EKS path; a real EKS deployment and Argo CD sync were verified for this capstone. Treat AWS as temporary demo infrastructure and destroy it after the final evidence and recording are saved.
 
 ## Screenshot evidence
 
-These initial screenshots are real local verification captures. The dashboard contains browser-test data, and the Grafana image is a local load/scaling check. They are previews, not AWS or ArgoCD evidence. The operator guide and presentation notes live in the parent `Devops_capstone` folder, outside this submission repository. The submittable screenshot page is [Screenshot.md](Screenshot.md), with captured PNGs in `docs/screenshots/`. The submission deadline is 16 October 2026, per the latest instruction; the older date in the attached submission note is superseded. Add final evidence images here only after each corresponding step has actually succeeded.
+The screenshots include local application previews and captures from the AWS EKS deployment. Each image is labeled by the system it actually shows; local demo inventory is fictional seed data. See [Screenshot.md](Screenshot.md) for the evidence index and `docs/screenshots/` for the PNGs. Do not use the AWS identity image or the in-progress Terraform apply image as proof of a successful plan or deployment.
 
 ![StockPilot dashboard from a local browser verification run](docs/screenshots/local-dashboard-smoke.png)
 
@@ -153,6 +154,8 @@ The workflow tests PostgreSQL APIs, checks Python code, tests/builds the fronten
 
 Both published GHCR packages were verified to allow anonymous pulls. When reproducing this setup in another repository, verify package visibility and change it to **Public** if necessary. Names are `ghcr.io/OWNER/REPOSITORY-backend` and `ghcr.io/OWNER/REPOSITORY-frontend`. Each image uses the full commit SHA, never `latest`.
 
+The workflow also defines a gated `deploy-aws` job that uses GitHub OIDC to update the Argo CD Application after image publication. In the saved successful run, this job was skipped, so the captured AWS deployment and Argo CD sync are separate evidence; the video must not call that run an end-to-end automatic AWS deployment.
+
 ```powershell
 .\scripts\start-watcher.ps1
 # .\scripts\stop-watcher.ps1
@@ -164,13 +167,13 @@ The start script runs the watcher in the background while your computer and Dock
 
 ## AWS path and grading
 
-See [AWS runbook](docs/AWS.md). Terraform creates a VPC, two public/private subnet pairs, one NAT gateway, an EKS cluster, two managed worker nodes, EBS CSI permissions, and AWS Load Balancer Controller permissions. Optional GitHub OIDC is restricted to main and Kubernetes administration in the application namespace.
+See [AWS runbook](docs/AWS.md). Terraform creates a VPC, two public/private subnet pairs, one NAT gateway, an EKS cluster, two managed worker nodes, EBS CSI permissions, and AWS Load Balancer Controller permissions. The configured optional CI deployment job uses GitHub OIDC and was skipped in the saved Actions run.
 
-**No AWS resources are provisioned by local setup or mocked tests.** The written rubric asks for actual AWS plan, VPC/EKS, Argo CD sync, and destroy evidence. Obtain the instructor's acceptance of mocking if using only the local path; do not present mock output as AWS provisioning. See [AWS and Argo CD deployment](docs/AWS.md).
+Terraform validation and mock-provider tests do not create AWS resources. The real AWS VPC/EKS deployment and Argo CD sync were performed; some required screenshots (a Terraform plan, VPC/EKS Console, Argo CD status, filtered Prometheus target, and teardown) are still missing from the screenshot folder. Never present mock output or an in-progress apply as a completed plan. See [AWS and Argo CD deployment](docs/AWS.md).
 
 ## Submission and presentation
 
-The attached submission note asks for a `demo/` folder containing the presentation video (MP4) and slide deck (PPT or PDF). Per the requested working layout, keep the master PPT/MP4 in this project root and copy them into `demo/` for upload so both locations are covered. The required video walkthrough lists the architecture, codebase, CI/CD, Terraform plan and AWS VPC/EKS, Argo CD sync, healthy Kubernetes resources, Prometheus target, and Grafana dashboard. Argo CD configuration is in `argocd/` and `scripts/bootstrap-argocd.ps1`; AWS resources are not created by tests or Terraform validation, so capture real cloud evidence only after deployment. Screenshot evidence belongs in [Screenshot.md](Screenshot.md) and `docs/screenshots/`. The operator guide and `DEMO.md` are kept in the parent `Devops_capstone` folder, outside this repository. PPT and MP4 belong in this project root after they are created. Deadline: **16 October 2026**, per the latest instruction.
+The attached submission note requires a `demo/` folder with the slide deck and a **mandatory MP4 video**, then submission of the public GitHub repository link through the provided form. Keep master copies at the repository root as requested, and keep matching submission copies in `demo/`. The video order is slides, codebase, CI/CD, Terraform plan and AWS VPC/EKS, Argo CD, healthy Kubernetes, Prometheus StockPilot target `UP`, and Grafana. The requested evidence-only recording uses saved captures and does not trigger a new run; clearly state that the saved CI run skipped AWS deployment and that several required screenshots are missing. The operator guide and recording script are kept in the parent `Devops_capstone` folder. The supplied submission brief lists the deadline as **19 October 2026 at 11:59 PM IST**.
 
 - [Rubric checklist and evidence map](docs/SUBMISSION.md)
 - [Screenshot evidence](Screenshot.md)
@@ -178,6 +181,14 @@ The attached submission note asks for a `demo/` folder containing the presentati
 - [API contract](docs/API.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Verification record](docs/VERIFICATION.md)
+
+Submission package checklist:
+
+- [ ] `demo/StockPilot.pptx` (or a PDF slide deck)
+- [ ] `demo/StockPilot-Demo.mp4`
+- [ ] Final screenshot evidence in `Screenshot.md` and `docs/screenshots/`
+- [ ] Successful AWS destroy evidence and no leftover billable resources
+- [ ] Submit the public repository URL at <https://forms.gle/XWAP1vAumDJgAPM1A>
 
 ```powershell
 .\scripts\collect-evidence.ps1

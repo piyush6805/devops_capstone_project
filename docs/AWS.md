@@ -9,7 +9,7 @@ Local Kind is a real Kubernetes demonstration. Terraform mock-provider tests val
 3. Authenticate AWS CLI using your permitted AWS profile/SSO. Never commit keys, kubeconfig, `.tfvars` containing sensitive values, or state.
 4. Check regional support with `aws eks describe-cluster-versions --region ap-south-1`. The selected version is 1.35 with STANDARD upgrade policy. Verify account quotas for EKS, EC2, VPC, EIP, and NAT.
 5. Use the same AWS identity for plan/apply/bootstrap, or arrange EKS access explicitly. Preserve the local Terraform state securely; it is necessary to destroy the resources.
-6. If GitHub Actions will update the AWS deployment, set `github_repository = "piyush6805/devops_capstone_project"` in the private `terraform.tfvars`. Terraform then creates a GitHub OIDC role restricted to `main` and to the `argocd` and `stockpilot` namespaces. Leave it empty for manual deployment.
+6. The optional `deploy-aws` workflow job uses a Terraform-created GitHub OIDC role. It is gated by repository variables and was skipped in the saved successful Actions run; the real AWS deployment was performed and verified separately.
 
 Official references: [EKS version lifecycle](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html), [EBS CSI](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html), [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/), [Pricing Calculator](https://calculator.aws/).
 
@@ -34,7 +34,7 @@ Set-Location ..
 
 Before running Terraform, select the verified named AWS profile (`$env:AWS_PROFILE = 'stockpilot-tf'` in PowerShell or `export AWS_PROFILE=stockpilot-tf` in Git Bash) and region `ap-south-1`. For manual deployment, set `api_allowed_cidrs = ["YOUR_PUBLIC_IPV4/32"]` in `terraform.tfvars`, replacing the placeholder with your current public IPv4 address. Do not leave the default `0.0.0.0/0` open to every source IP. GitHub-hosted runners need reachable API access; use manual AWS deployment for this classroom demo unless wider control-plane access has been deliberately reviewed. Private worker subnets reach image registries through the single NAT gateway. This is a short-lived classroom architecture, not a highly available production database or network.
 
-`scripts/bootstrap-aws.ps1` installs the AWS Load Balancer Controller using its Terraform-provisioned IRSA role, Traefik with an internet-facing NLB Service, Metrics Server, the gp3 StorageClass, monitoring, generated database/Grafana Secrets, and Argo CD. It then applies `argocd/stockpilot-project.yaml` and `argocd/stockpilot-application.yaml`; Argo CD renders the Helm chart from the public repository and deploys it to `stockpilot`. The AppProject limits the source repository and destination namespace. `values-gitops.yaml` pins both public images to the full SHA of a successful CI run. The Argo CD Helm chart is pinned to 10.10.3 in `scripts/bootstrap-argocd.ps1`. The controller policy is vendored from upstream release v3.6.0. The AWS path has been checked with Terraform validation/mocks; actual provisioning remains a separate check.
+`scripts/bootstrap-aws.ps1` installs the AWS Load Balancer Controller using its Terraform-provisioned IRSA role, Traefik with an internet-facing NLB Service, Metrics Server, the gp3 StorageClass, monitoring, generated database/Grafana Secrets, and Argo CD. It then applies `argocd/stockpilot-project.yaml` and `argocd/stockpilot-application.yaml`; Argo CD renders the Helm chart from the public repository and deploys it to `stockpilot`. The AppProject limits the source repository and destination namespace. `values-gitops.yaml` pins both public images to the full SHA of a successful CI run. The Argo CD Helm chart is pinned to 10.10.3 in `scripts/bootstrap-argocd.ps1`. The controller policy is vendored from upstream release v3.6.0. This project was provisioned on AWS and the Argo CD application, EKS workloads, ingress, and persistent volume were verified. Capture the final destroy evidence before the deadline and verify no billable resources remain.
 
 ## Deploy application images
 
@@ -51,13 +51,15 @@ kubectl --context stockpilot-aws get svc traefik -n ingress
 
 The AWS application Ingress omits a hostname, so access the NLB DNS address directly. Demonstrate only fictional data: this v1 application has no login or public TLS setup.
 
-For automatic AWS deployment through Argo CD, the GitHub `deploy-aws` job runs only after a successful main-branch test, build, and Trivy scan. It assumes the Terraform-created OIDC role, pins that run's immutable SHA in the Argo CD Application, waits for `Synced` and `Healthy`, then checks `/api/version`. Set repository variables only after infrastructure and `bootstrap-aws.ps1` are ready:
+The configured `deploy-aws` job can run after a successful main-branch test, image build, Trivy scan, and GHCR publication when `DEPLOY_AWS=true`. It uses GitHub OIDC to assume the Terraform-created role, updates the Argo CD Application with the exact published image SHA, and waits for sync, health, and `/api/version`. In the saved successful Actions run, the job was skipped; do not present it as a completed automatic deployment. The AWS deployment and Argo CD status were verified separately.
 
-- `AWS_DEPLOY_ROLE_ARN`: Terraform `github_deploy_role_arn` output.
-- `EKS_CLUSTER_NAME`: `stockpilot-eks`.
-- `DEPLOY_AWS`: `true`, only after infrastructure and bootstrap are ready.
+Enable the repository variable only after the AWS cluster and Argo CD Application are healthy. In GitHub, open **Settings → Secrets and variables → Actions → Variables → New repository variable**, set name `DEPLOY_AWS`, value `true`, and save. Or, with authenticated GitHub CLI:
 
-OIDC trust accepts only `repo:piyush6805/devops_capstone_project:ref:refs/heads/main`. The role can administer only the `argocd` and `stockpilot` namespaces; Argo CD's AppProject further restricts the managed app to the public StockPilot repository and namespace. No long-lived AWS key is stored in GitHub. If the account already has a GitHub OIDC provider, set `existing_github_oidc_provider_arn` to reuse it. The deploy job will fail if Argo CD is not installed or its Application is not healthy; leave `DEPLOY_AWS` unset until bootstrap is complete.
+```powershell
+gh variable set DEPLOY_AWS --body true --repo piyush6805/devops_capstone_project
+```
+
+The job requires the correct repository variables, AWS OIDC trust, and EKS access to be configured. The saved run's skipped status means that end-to-end Actions-to-AWS behavior is not demonstrated by the screenshot.
 
 For the Argo CD UI, keep it private and use a local port-forward:
 
@@ -72,7 +74,7 @@ Open `https://localhost:8080`, sign in as `admin`, and capture the StockPilot ap
 
 ## Capture evidence and destroy
 
-Capture real plan output, AWS Console VPC/EKS screens, application ingress, Running pods, Helm releases, and monitoring before teardown. Disable `DEPLOY_AWS` and stop any delivery watcher before deleting resources.
+Capture real plan output, AWS Console VPC/EKS screens, application ingress, Running pods, Helm releases, and monitoring before teardown. Set `DEPLOY_AWS=false` (or remove the variable) and let any active Actions run finish before deleting resources.
 
 ```powershell
 .\scripts\cleanup-aws.ps1 -DestroyInfrastructure
