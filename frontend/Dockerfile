@@ -7,7 +7,7 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:stable-alpine AS runtime
 ENV BACKEND_UPSTREAM=backend:8000
 USER root
-RUN apk upgrade --no-cache libexpat
+RUN apk upgrade --no-cache
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 USER 101:101
